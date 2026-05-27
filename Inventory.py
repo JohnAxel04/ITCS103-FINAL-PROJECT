@@ -13,7 +13,7 @@ def valid():
         messagebox.showerror("Invalid Input","Input must not be empty")
         return False
     if not qty.isdigit() or not price.isdigit():
-        messagebox.showerror("Invalid Input","Quantity,Price,Expiry Date must be a number")
+        messagebox.showerror("Invalid Input","Quantity and Price must be numbers")
         return False
     
     try:
@@ -41,18 +41,28 @@ def save():
     wrk = op.load_workbook("Inventory.xlsx")
     sheet = wrk.active
     totalprice = qty * price
-    id = sheet.max_row
+
+    oldid = sheet.cell(row=sheet.max_row, column=1).value
+    id = oldid + 1
+
     sheet.append([id,entry,qty,price,exp,opt,totalprice])
     wrk.save("Inventory.xlsx")
     messagebox.showinfo("Successfull","Item added successfully")
+    productEntry.delete(0,tk.END)
+    productquatity.delete(0,tk.END)
+    productPrice.delete(0,tk.END)
+    productExpiry.delete(0,tk.END)
+    typeOption.current(0)
     refresh()
 def refresh():
     work = op.load_workbook("Inventory.xlsx")
     sheet = work.active
     for i in table.get_children():
         table.delete(i)
+    
     for row in sheet.iter_rows(min_row=2,values_only=True):
-        table.insert("",tk.END,values=row)
+        packaging_type = row[5]
+        table.insert("",tk.END,values=row,tags=(packaging_type,))
 def focus(event):
     selected = table.focus()
     values = table.item(selected,"values")
@@ -129,11 +139,27 @@ def delete():
     messagebox.showinfo("Delete","Info successfully deleted")
     refresh()
 
+def search():
+    searched = searchEntry.get().lower()
+
+    work = op.load_workbook("Inventory.xlsx")
+    sheet = work.active
+
+    for i in table.get_children():
+        table.delete(i)
+    
+    for row in sheet.iter_rows(min_row=2,values_only=True):
+        name = str(row[1]).lower()
+        types = str(row[5]).lower()
+
+        if searched in name or searched in types:
+            table.insert("",tk.END,values=row)
+
 
 window = tk.Tk()
 window.title("Inventory System")
-mainlabel = tk.Label(window,text="Inventory System",font=("Poppins",15,"bold"))
-mainlabel.grid(columnspan=5)
+mainlabel = tk.Label(window,text="Inventory Management System",font=("Poppins",15,"bold"))
+mainlabel.grid(columnspan=5,pady=10)
 frame = tk.Frame(window,background="#888")
 frame.grid(row=1,columnspan=6,padx=5,pady=8)
 
@@ -149,6 +175,12 @@ options = ['Box','Pack','Sachet',"Galon"]
 typeOption = ttk.Combobox(frame,values=options,state="readonly")
 typeOption.current(0)
 typeOption.grid(column=4,row=0,padx=5,pady=(8,2))
+searchEntry = tk.Entry(frame)
+searchEntry.grid(column=0,row=2,columnspan=2,sticky="ew",padx=(5,0))
+searchLabel = tk.Label(frame,text="Search",background="#888",foreground="white")
+searchLabel.grid(column=0,row=3,columnspan=2)
+searchbtn = tk.Button(frame,text="Search",height=1,width=8,command=search,activebackground="#e67e22",background="#f39c12",fg="white",font=("poppins",9,"bold"))
+searchbtn.grid(column=2,row=2,sticky="w",padx=5)
 
 NameLabel = tk.Label(frame,text="Product Name",background="#888",foreground="white")
 NameLabel.grid(row=1,column=0)
@@ -161,21 +193,70 @@ ExpiryLabel.grid(row=1,column=3)
 TypeLabel = tk.Label(frame,text="Type of Packaging",background="#888",foreground="white")
 TypeLabel.grid(row=1,column=4)
 def savebt(event):
-    SaveBtn['background'] = "black"
+    SaveBtn['bg'] = "#2980b9"
+def outsave(event):
+    SaveBtn['bg'] = "#3498db"
 btnframe = tk.Frame(window)
 btnframe.grid(row=2,columnspan=4)
-SaveBtn = tk.Button(btnframe,text="Submit",command=save)
+SaveBtn = tk.Button(btnframe,text="Submit",command=save,activebackground="#2980b9",background="#3498db",fg="white",width=9,height=2,font=("poppins",9,"bold"))
 SaveBtn.grid(column=1,row=0,padx=10,pady=(1,10))
-SaveBtn.bind("<<Enter>>",savebt)
-UpdateBtn = tk.Button(btnframe,text="Update",command=update)
+SaveBtn.bind("<Enter>",savebt)
+SaveBtn.bind("<Leave>",outsave)
+
+def updbt(event):
+    UpdateBtn['bg'] = "#27ae60"
+def outup(event):
+    UpdateBtn['bg'] = "#2ecc71"
+UpdateBtn = tk.Button(btnframe,text="Update",command=update,activebackground="#27ae60",background="#2ecc71",fg="white",width=8,height=1,font=("poppins",9,"bold"))
 UpdateBtn.grid(column=0,row=0,padx=10,pady=(1,10))
-DeleteBtn = tk.Button(btnframe,text="Delete",command=delete)
+
+UpdateBtn.bind("<Enter>",updbt)
+UpdateBtn.bind("<Leave>",outup)
+
+def updel(event):
+    DeleteBtn['bg'] = "#c0392b"
+def outdel(event):
+    DeleteBtn['bg'] = "#e74c3c"
+DeleteBtn = tk.Button(btnframe,text="Delete",command=delete,activebackground="#c0392b",background="#e74c3c",fg="white",width=8,height=1,font=("poppins",9,"bold"))
 DeleteBtn.grid(column=2,row=0,padx=10,pady=(1,10))
+
+DeleteBtn.bind("<Enter>",updel)
+DeleteBtn.bind("<Leave>",outdel)
+
+style = ttk.Style()
+
+style.theme_use("clam")
+
+style.configure("Treeview",backgound = "white",foreground = "black",rowheight = 25,fieldbackground = "white",font = ("Poppins",10))
+
+style.configure("Treeview.Heading",background = "#8492a0",foreground = "white",font=("Poppins", 10, "bold"))
+
+style.map( "Treeview",background=[("selected", "#3498db")],foreground=[("selected", "white")])
+
 
 table = ttk.Treeview(window,columns=("ID","Product Name","Quantity","Price","Expiry","Type of packaging","Total Price"),show="headings")
 for row in ("ID","Product Name","Quantity","Price","Expiry","Type of packaging","Total Price"):
     table.heading(row, text=row)
-table.grid(columnspan=4,row=3,padx=10)
+
+table.column("ID", width=50, anchor="center")
+table.column("Product Name", width=180)
+table.column("Quantity", width=100, anchor="center")
+table.column("Price", width=100, anchor="center")
+table.column("Expiry", width=120, anchor="center")
+table.column("Type of packaging", width=150, anchor="center")
+table.column("Total Price", width=120, anchor="center")
+
+table.tag_configure("Box", background="#d6eaf8")
+table.tag_configure("Pack", background="#d5f5e3")
+table.tag_configure("Sachet", background="#fcf3cf")
+table.tag_configure("Galon", background="#fadbd8")
+
+table.grid(columnspan=4,row=3,pady=(0,20),padx=20)
 table.bind("<<TreeviewSelect>>",focus)
 refresh()
+
+footer = tk.Frame(window,background="darkgrey")
+footer.grid(column=0,row=4,columnspan=4,sticky="we")
+footerLabel = tk.Label(footer,text="@johnaxel04 5-2026",background="darkgrey")
+footerLabel.pack()
 window.mainloop()
